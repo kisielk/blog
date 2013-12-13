@@ -1,0 +1,86 @@
+Using the Go "regexp" Package
+5 Jul 2012
+Tags: regexp
+
+Kamil Kisiel
+
+* Introduction
+
+Coming from a Python background, when I first looked at Go's regexp package for
+I was a bit confused.  In particular the part of the documentation that
+read:
+
+    There are 16 methods of Regexp that match a regular expression and identify the matched text. 
+    Their names are matched by this regular expression: Find(All)?(String)?(Submatch)?(Index)?
+
+was a bit bewildering. Why are there 16 methods for performing regular
+expression matching? Being accustomed to Python, where there are simply
+`match()` and `search()` functions, I didn’t immediately understand the
+justification.
+
+After reflecting a bit about the design of the Go language, I think I now
+understand why the package API is the way it is.
+
+Go doesn’t support optional function arguments. Therefore you need to define
+differently named functions that accept a different number of parameters. Hence
+all the variants of a function such as `Find()`, `FindAll()`,
+`FindAllSubmatch()` etc.
+
+Another complication is that Go is a statically typed language without support
+for function overloading.  Currently Go also lacks generics, so unless you wish
+to forego compile-time type safety you must also define a variant of a function
+for each type it must support. The regexp package supports both the `[]byte`
+and `string` types hence variants such as `Find()` and `FindString()`.
+
+Here's an example:
+
+.play -edit regexp/simple.go
+
+A few things to note:
+
+- I’ve used the backticks ` `...` ` instead of quotes `"..."` around my regular expression literal in order to avoid having to escape backslashes.
+- I’m using the `FindString()` method because my input is of type `string` and not `[]byte`
+
+
+* Submatches
+
+Often regular expressions can be much more complicated than a single match  and benefit
+from the usage of capturing groups, or subexpressions as they are called in the
+regexp package.
+
+Subexpressions are handled by the `*SubMatch()` series of methods. Instead of
+returning a single match string these methods return a `[]string` which is indexed
+by the match group position. The 0th item of the slice corresponds to the entire
+match.
+
+For example:
+
+.play -edit regexp/submatch.go
+
+
+* Named Capturing Groups
+
+Once a regular expression begins to be come more complicated it’s useful to be
+able to document the purpose of the matching groups. Fortunately the regexp
+package supports named capturing groups much like python. A named capturing
+group is created with the `(?P<name>re)` syntax:
+
+.play -edit regexp/named.go
+
+The names of the capturing groups can be retrieved via the `SubExpNames()` method
+and their index within the slice will match the corresponding index of the slice
+returned by `FindStringSubmatch()`. Capturing groups without a name such as the
+middle one in the example expression will simply have an empty string.
+
+Using this knowledge is possible to define a custom Regexp type which allows you
+to return your regular expression match as a map keyed by the subexpression
+name:
+
+.play -edit regexp/custom.go
+
+This particular example ignores capturing groups without names but they could
+possibly be returned as a second return value or via special names in the map.
+
+This post has just scratched the surface of the capabilities of the regexp
+package but hopefully it’s illustratative of some of the usage and gives you
+some ideas for how it can be extended.
